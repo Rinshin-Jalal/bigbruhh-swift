@@ -8,10 +8,16 @@
 import SwiftUI
 
 struct AlmostThereView: View {
+    let onCommit: () -> Void
+
     @State private var navigateToHome = false
-    @State private var navigateToPaywall = false
     @State private var currentStep: Int = 0
     @State private var showChoiceScreen: Bool = false
+
+    // Binary choice animations
+    @State private var pressedSide: ChoiceSide? = nil
+    @State private var hoveredSide: ChoiceSide? = nil
+    @State private var gradientProgress: CGFloat = 0
 
     // Development mode
     private var isDevelopment: Bool {
@@ -48,11 +54,11 @@ struct AlmostThereView: View {
 
     // Colors matching React Native version
     private var backgroundColor: Color {
-        return .black
+        return .white
     }
 
     private var textColor: Color {
-        return .white
+        return .black
     }
 
     private var accentColor: Color {
@@ -67,73 +73,72 @@ struct AlmostThereView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                backgroundColor.ignoresSafeArea()
-
-                if showChoiceScreen {
-                    // Binary Choice Screen - Step 5
-                    choiceScreenView
-                } else {
-                    // Explanation Steps 1-4
-                    explanationStepView
+        ZStack {
+            backgroundColor.ignoresSafeArea()
+                .onAppear {
+                    print("👀 AlmostThereView appeared")
+                }
+                .onDisappear {
+                    print("👋 AlmostThereView disappeared")
                 }
 
-                // Debug button for development
-                if isDevelopment {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button("HOME") {
-                                print("🔧 DEV: Going back to home page")
-                                markAlmostThereCompleted()
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                            .padding(.trailing, 20)
-                            .padding(.top, 60)
-                        }
+            if showChoiceScreen {
+                // Binary Choice Screen - Step 5
+                choiceScreenView
+            } else {
+                // Explanation Steps 1-4
+                explanationStepView
+            }
+
+            // Debug button for development
+            if isDevelopment {
+                VStack {
+                    HStack {
                         Spacer()
+                        Button("HOME") {
+                            print("🔧 DEV: Going back to home page")
+                            markAlmostThereCompleted()
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .padding(.trailing, 20)
+                        .padding(.top, 60)
                     }
+                    Spacer()
                 }
             }
-            .navigationBarBackButtonHidden(true)
-            .navigationBarHidden(true)
-            .navigationDestination(isPresented: $navigateToHome) {
-                HomeView()
-            }
-            .navigationDestination(isPresented: $navigateToPaywall) {
-                // TODO: Create PaywallView
-                Text("Paywall - Coming Soon")
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black)
-            }
+        }
+        .navigationBarBackButtonHidden(true)
+        .navigationBarHidden(true)
+        .fullScreenCover(isPresented: $navigateToHome) {
+            HomeView()
         }
     }
 
     // MARK: - Explanation Step View (Steps 1-4)
 
     private var explanationStepView: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ZStack {
+            // Vertically centered, left-aligned text
+            VStack {
+                Spacer()
 
-            Text(confrontationSteps[currentStep].prompt)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(textColor)
-                .tracking(1.5)
-                .lineSpacing(2)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
+                Text(confrontationSteps[currentStep].prompt)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(textColor)
+                    .tracking(1.5)
+                    .lineSpacing(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
 
-            Spacer()
-            Spacer()
+                Spacer()
+            }
 
-            // Continue button (bottom right)
+            // Continue button (bottom right) - positioned absolutely
             VStack {
                 Spacer()
                 HStack {
@@ -149,9 +154,9 @@ struct AlmostThereView: View {
                     }
                     .applyStepGlassEffect(prominent: true, accentColor: accentColor)
                     .transition(.opacity.combined(with: .scale))
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 40)
                 }
+                .padding(.trailing, 24)
+                .padding(.bottom, 40)
             }
         }
         .onAppear {
@@ -163,70 +168,56 @@ struct AlmostThereView: View {
     // MARK: - Choice Screen View (Step 5)
 
     private var choiceScreenView: some View {
-        HStack(spacing: 0) {
-            // Left side - Stay Weak (Red)
-            VStack {
-                Spacer()
+        ZStack {
+            // Base white background
+            Color.white.ignoresSafeArea()
 
-                Text("STAY WEAK\nSTAY THE SAME\nSTAY COMFORTABLE")
-                    .font(.system(size: 48, weight: .black))
-                    .foregroundColor(.white)
-                    .tracking(2)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .minimumScaleFactor(0.5)
-
-                Spacer()
-
+            VStack(spacing: 0) {
+                // Top half - LEAVE
                 Button(action: handleLeave) {
-                    Text("LEAVE")
-                        .font(.system(size: 35, weight: .black))
-                        .foregroundColor(.white)
-                        .tracking(4)
-                        .padding(.vertical, 16)
-                        .padding(.horizontal, 20)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(hex: "#DC143C"))
-                        .cornerRadius(10)
+                    VStack {
+                        Spacer()
+                        Text("LEAVE")
+                            .font(.system(size: 80, weight: .black))
+                            .foregroundColor(Color.gray)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 60)
-            }
-            .frame(maxWidth: .infinity)
-            .background(Color(hex: "#DC143C"))
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
 
-            // Right side - Pay The Price (Purple)
-            VStack {
-                Spacer()
+                // Center divider line
+                Rectangle()
+                    .fill(Color.black)
+                    .frame(height: 2)
 
-                Text("PAY THE PRICE\nFACE THE TRUTH\nBECOME UNSTOPPABLE")
-                    .font(.system(size: 48, weight: .black))
-                    .foregroundColor(.white)
-                    .tracking(2)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .minimumScaleFactor(0.5)
-
-                Spacer()
-
+                // Bottom half - COMMIT
                 Button(action: handleCommit) {
-                    Text("COMMIT")
-                        .font(.system(size: 35, weight: .black))
-                        .foregroundColor(.white)
-                        .tracking(4)
-                        .padding(.vertical, 16)
-                        .padding(.horizontal, 20)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(hex: "#8B00FF"))
-                        .cornerRadius(10)
+                    VStack {
+                        Spacer()
+                        Text("COMMIT")
+                            .font(.system(size: 80, weight: .black))
+                            .foregroundColor(Color.brutalRed)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 60)
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity)
-            .background(Color(hex: "#8B00FF"))
+        }
+        .ignoresSafeArea()
+    }
+
+    // Dynamic text color based on gradient presence
+    private func getTextColor(for side: ChoiceSide) -> Color {
+        if pressedSide == side {
+            return .white
+        } else if hoveredSide == side && gradientProgress > 0.3 {
+            return .white
+        } else {
+            return .black
         }
     }
 
@@ -247,13 +238,17 @@ struct AlmostThereView: View {
     private func handleLeave() {
         triggerHaptic(intensity: 1.0)
         print("User chose to LEAVE - marking almost there as completed and going home")
+
+        // Navigate immediately without gradient animation
         markAlmostThereCompleted()
     }
 
     private func handleCommit() {
         triggerHaptic(intensity: 1.0)
-        print("User chose to COMMIT - navigating to paywall")
-        navigateToPaywall = true
+        print("🔥 handleCommit called - calling onCommit callback")
+
+        // Call parent callback to navigate to paywall
+        onCommit()
     }
 
     private func markAlmostThereCompleted() {
@@ -275,28 +270,20 @@ struct AlmostThereView: View {
 
 // MARK: - Supporting Types
 
+enum ChoiceSide {
+    case leave
+    case commit
+}
+
 struct ConfrontationStep {
     let id: Int
     let prompt: String
 }
 
-// MARK: - Glass Effect Extensions
-
-extension View {
-    func applyStepGlassEffect(prominent: Bool = false, accentColor: Color) -> some View {
-        if #available(iOS 26.0, *) {
-            return self.glassEffect(.regular.tint(accentColor).interactive())
-        } else {
-            return self.background(Color.gray.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-    }
-}
-
-// Color extension is already defined in Shared/Theme/Colors.swift
-
 // MARK: - Preview
 
 #Preview {
-    AlmostThereView()
+    AlmostThereView(onCommit: {
+        print("Commit tapped")
+    })
 }

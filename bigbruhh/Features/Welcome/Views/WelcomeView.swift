@@ -9,12 +9,13 @@
 import SwiftUI
 
 struct WelcomeView: View {
+    @EnvironmentObject var authService: AuthService
+    @EnvironmentObject var navigator: AppNavigator
     @State private var showCTA: Bool = false
     @State private var isLongPressing: Bool = false
     @State private var ctaOpacity: Double = 0.0
 
     var body: some View {
-        NavigationStack {
             ZStack {
                 // Keep black background as requested
                 Color.brutalBlack
@@ -47,7 +48,7 @@ struct WelcomeView: View {
                     VStack(spacing: 24) {
                         // CTA Button - Using logo color (brutalRed)
                         if showCTA {
-                            NavigationLink(destination: OnboardingView()) {
+                            Button(action: handleStartTalking) {
                                 Group {
                                     if #available(iOS 26, *) {
                                         Text(isLongPressing ? "CONNECTING..." : "START TALKING")
@@ -90,18 +91,12 @@ struct WelcomeView: View {
                         }
 
                         // Secondary Action - Sign In Link
-                        NavigationLink(destination: AuthView()) {
+                        Button(action: handleSignIn) {
                             Text("Already have an account? Sign in")
                                 .font(.system(size: 14, weight: .regular, design: .default))
                                 .foregroundColor(Color.brutalRedLight.opacity(0.7))
                                 .kerning(0.5)
                         }
-                        .simultaneousGesture(
-                            TapGesture()
-                                .onEnded { _ in
-                                    triggerHaptic(intensity: 0.3)
-                                }
-                        )
                     }
                     .padding(.bottom, 32)
                 }
@@ -115,8 +110,6 @@ struct WelcomeView: View {
                     }
                 }
             }
-        }
-        .navigationBarHidden(true)
     }
 
     // MARK: - Actions
@@ -138,6 +131,18 @@ struct WelcomeView: View {
         let impact = UIImpactFeedbackGenerator(style: intensity > 0.8 ? .heavy : .light)
         impact.impactOccurred()
         #endif
+    }
+
+    private func handleStartTalking() {
+        print("🚀 START TALKING tapped - navigating to onboarding")
+        triggerHaptic(intensity: 1.0)
+        navigator.currentScreen = .onboarding
+    }
+
+    private func handleSignIn() {
+        print("🔑 Sign in tapped")
+        triggerHaptic(intensity: 0.3)
+        // TODO: Show sign in view
     }
 }
 

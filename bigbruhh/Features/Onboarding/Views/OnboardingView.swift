@@ -11,6 +11,8 @@ import SwiftUI
 import Combine
 
 struct OnboardingView: View {
+    let onComplete: () -> Void
+
     @StateObject private var state = OnboardingState()
     @StateObject private var soundManager = OnboardingSoundManager()
     @Environment(\.dismiss) private var dismiss
@@ -23,9 +25,6 @@ struct OnboardingView: View {
     @State private var showGlitchTransition = false
     @State private var ritualLevel: Double = 0.0
 
-    // Navigation
-    @State private var navigateToAlmostThere = false
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -34,69 +33,67 @@ struct OnboardingView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                // Progress Indicator (segmented bars - GLASSY LIQUID!)
-                PhaseProgressView(currentStep: state.currentStep, accentColor: getAccentColor(for: state.currentStep))
-                    .padding(.top, 20)
+                    // Progress Indicator (segmented bars - GLASSY LIQUID!)
+                    PhaseProgressView(currentStep: state.currentStep, accentColor: getAccentColor(for: state.currentStep))
+                        .padding(.top, 20)
 
-                Spacer()
+                    Spacer()
 
-                // Current Step Content (PLACEHOLDER - No step components yet)
-                currentStepView
+                    // Current Step Content (PLACEHOLDER - No step components yet)
+                    currentStepView
 
-                Spacer()
-            }
-
-            // Debug button - Absolute positioned top-right (iOS 26+ Liquid Glass)
-            if isDevelopment {
-                VStack {
-                    HStack {
-                        Spacer()
-
-                        if #available(iOS 26.0, *) {
-                            Button("Debug") {
-                                showDebugModal = true
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .glassEffect(.regular.tint(.gray).interactive())
-                            .padding(.trailing, 20)
-                            .padding(.top, 60)
-                        } else {
-                            Button("Debug") {
-                                showDebugModal = true
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.3))
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .padding(.trailing, 20)
-                            .padding(.top, 60)
-                        }
-                    }
                     Spacer()
                 }
-            }
 
-            // Glitch transition overlay
-            GlitchTransitionView(isVisible: showGlitchTransition, mode: .intense, duration: 0.22)
-        }
-        .navigationDestination(isPresented: $navigateToAlmostThere) {
-            AlmostThereView()
-        }
-        .sheet(isPresented: $showDebugModal) {
-            DebugModalView(state: state, onJumpToStep: jumpToStep)
-        }
-        .navigationBarBackButtonHidden(true)
-        .navigationBarHidden(true)
-        .interactiveDismissDisabled(true)
-        .onAppear {
-            loadSavedState()
-            updateAmbientMusic()
-        }
-        .onChange(of: state.currentStep) { _ in
-            updateAmbientMusic()
+                // Debug button - Absolute positioned top-right (iOS 26+ Liquid Glass)
+                if isDevelopment {
+                    VStack {
+                        HStack {
+                            Spacer()
+
+                            if #available(iOS 26.0, *) {
+                                Button("Debug") {
+                                    showDebugModal = true
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .glassEffect(.regular.tint(.gray).interactive())
+                                .padding(.trailing, 20)
+                                .padding(.top, 60)
+                            } else {
+                                Button("Debug") {
+                                    showDebugModal = true
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.gray.opacity(0.3))
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .padding(.trailing, 20)
+                                .padding(.top, 60)
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+
+                // Glitch transition overlay
+                GlitchTransitionView(isVisible: showGlitchTransition, mode: .intense, duration: 0.22)
+            }
+            .sheet(isPresented: $showDebugModal) {
+                DebugModalView(state: state, onJumpToStep: jumpToStep)
+            }
+            .navigationBarBackButtonHidden(true)
+            .navigationBarHidden(true)
+            .interactiveDismissDisabled(true)
+            .onAppear {
+                loadSavedState()
+                updateAmbientMusic()
+            }
+            .onChange(of: state.currentStep) { _ in
+                updateAmbientMusic()
+            }
         }
     }
 
@@ -216,7 +213,8 @@ struct OnboardingView: View {
                 .foregroundColor(.red)
         }
     }
-}
+
+    // MARK: - Actions
 
     private func jumpToStep(_ stepNumber: Int) {
         state.currentStep = stepNumber
@@ -233,9 +231,12 @@ struct OnboardingView: View {
         print("👤 Brother name: \(state.brotherName)")
         print("👤 User name: \(state.userName ?? "N/A")")
 
-        // Navigate to the confrontation sequence (Almost There)
+        // Save completed onboarding data for access by other views (Paywall, Signup, etc.)
+        OnboardingDataManager.shared.saveCompletedData(state)
+
+        // Call parent callback to navigate to AlmostThere
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            navigateToAlmostThere = true
+            onComplete()
         }
     }
 
@@ -274,14 +275,19 @@ struct OnboardingView: View {
     }
 
     private func loadSavedState() {
+        // NOTE: In-progress state is cleared on app restart by OnboardingDataManager
+        // This ensures users always start from step 1
+        // Completed data is preserved separately for access by Paywall, Signup, etc.
         if let savedData = UserDefaults.standard.data(forKey: "onboarding_v3_state"),
            let decoded = try? JSONDecoder().decode(OnboardingState.self, from: savedData) {
-            // Restore state
+            // Restore state (only works within same session)
             state.currentStep = decoded.currentStep
             state.responses = decoded.responses
             state.brotherName = decoded.brotherName
             state.userName = decoded.userName
             print("📂 State loaded: Step \(state.currentStep)")
+        } else {
+            print("📂 No in-progress state found - starting fresh from step 1")
         }
     }
 
@@ -688,5 +694,7 @@ struct DebugModalView: View {
 // MARK: - Preview
 
 #Preview {
-    OnboardingView()
+    OnboardingView(onComplete: {
+        print("Preview: Onboarding completed")
+    })
 }

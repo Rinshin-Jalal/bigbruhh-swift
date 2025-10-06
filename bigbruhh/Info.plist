@@ -2,6 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>EXPO_POSTHOG_API_KEY</key>
+	<string>$(EXPO_POSTHOG_API_KEY)</string>
+	<key>EXPO_POSTHOG_PROJECT_ID</key>
+	<string>$(EXPO_POSTHOG_PROJECT_ID)</string>
+	<key>PUBLIC_BACKEND_URL</key>
+	<string>$(PUBLIC_BACKEND_URL)</string>
+	<key>PUBLIC_REVENUECAT_IOS_API_KEY</key>
+	<string>$(PUBLIC_REVENUECAT_IOS_API_KEY)</string>
+	<key>PUBLIC_SUPABASE_ANON_KEY</key>
+	<string>$(PUBLIC_SUPABASE_ANON_KEY)</string>
+	<key>PUBLIC_SUPABASE_URL</key>
+	<string>$(PUBLIC_SUPABASE_URL)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
@@ -9,32 +21,6 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>BigBruh needs microphone access for voice responses and accountability calls</string>
-
-	<!-- Supabase Configuration -->
-	<key>PUBLIC_SUPABASE_URL</key>
-	<string>$(PUBLIC_SUPABASE_URL)</string>
-
-	<key>PUBLIC_SUPABASE_ANON_KEY</key>
-	<string>$(PUBLIC_SUPABASE_ANON_KEY)</string>
-
-	<!-- Backend URL -->
-	<key>PUBLIC_BACKEND_URL</key>
-	<string>$(PUBLIC_BACKEND_URL)</string>
-
-	<!-- PostHog Analytics -->
-	<key>EXPO_POSTHOG_API_KEY</key>
-	<string>$(EXPO_POSTHOG_API_KEY)</string>
-
-	<key>EXPO_POSTHOG_PROJECT_ID</key>
-	<string>$(EXPO_POSTHOG_PROJECT_ID)</string>
-
-	<!-- RevenueCat -->
-	<key>PUBLIC_REVENUECAT_IOS_API_KEY</key>
-	<string>$(PUBLIC_REVENUECAT_IOS_API_KEY)</string>
-
-	<!-- Launch Screen Configuration -->
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

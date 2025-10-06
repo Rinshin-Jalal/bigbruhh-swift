@@ -7,26 +7,11 @@
 
 import SwiftUI
 
-struct EntryView: View {
-    @StateObject private var authService = AuthService.shared
+// DEPRECATED - Use RootView instead
+// This file is kept for backwards compatibility but should not be used
 
+struct EntryView: View {
     var body: some View {
-        Group {
-            if authService.loading {
-                LoadingView()
-            } else if authService.isAuthenticated {
-                if authService.user?.onboardingCompleted == true {
-                    if authService.user?.almostThereCompleted == true {
-                        HomeView()
-                    } else {
-                        AlmostThereView()
-                    }
-                } else {
-                    OnboardingView()
-                }
-            } else {
-                WelcomeView()
-            }
-        }
+        RootView()
     }
 }

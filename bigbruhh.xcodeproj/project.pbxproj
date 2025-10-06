@@ -18,15 +18,22 @@
 		0E39AD4A2E8D47EA00AF1300 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = 0E39AD492E8D47EA00AF1300 /* ElevenLabs */; };
 		0E39AD4D2E8D480200AF1300 /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0E39AD4C2E8D480200AF1300 /* LiveKit */; };
 		0E6DD06C2E8E86EF0043695B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 0E6DD06B2E8E86EF0043695B /* Supabase */; };
+		0E93B7852E92715200C6D7C5 /* glitch.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7842E92715200C6D7C5 /* glitch.mp3 */; };
+		0E93B7892E92716C00C6D7C5 /* sub_bass.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7862E92716C00C6D7C5 /* sub_bass.mp3 */; };
+		0E93B78A2E92716C00C6D7C5 /* ticking-clock.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7882E92716C00C6D7C5 /* ticking-clock.mp3 */; };
+		0E93B78B2E92716C00C6D7C5 /* success.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7872E92716C00C6D7C5 /* success.mp3 */; };
+		0E93B78D2E92717900C6D7C5 /* glitch-long.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B78C2E92717900C6D7C5 /* glitch-long.mp3 */; };
+		0EBBA9682E92951B00C741F7 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 0EBBA9672E92951B00C741F7 /* Products.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0E39AD232E8D44FF00AF1300 /* bigbruhh.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bigbruhh.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0E93B76A2E923BDD00C6D7C5 /* glitch.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = glitch.mp3; sourceTree = "<group>"; };
-		0E93B76B2E923BDD00C6D7C5 /* glitch-long.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "glitch-long.mp3"; sourceTree = "<group>"; };
-		0E93B76C2E923BDD00C6D7C5 /* sub_bass.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = sub_bass.mp3; sourceTree = "<group>"; };
-		0E93B76D2E923BDD00C6D7C5 /* success.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = success.mp3; sourceTree = "<group>"; };
-		0E93B76E2E923BDD00C6D7C5 /* ticking-clock.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ticking-clock.mp3"; sourceTree = "<group>"; };
+		0E93B7842E92715200C6D7C5 /* glitch.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = glitch.mp3; sourceTree = "<group>"; };
+		0E93B7862E92716C00C6D7C5 /* sub_bass.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = sub_bass.mp3; sourceTree = "<group>"; };
+		0E93B7872E92716C00C6D7C5 /* success.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = success.mp3; sourceTree = "<group>"; };
+		0E93B7882E92716C00C6D7C5 /* ticking-clock.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ticking-clock.mp3"; sourceTree = "<group>"; };
+		0E93B78C2E92717900C6D7C5 /* glitch-long.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "glitch-long.mp3"; sourceTree = "<group>"; };
+		0EBBA9672E92951B00C741F7 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -75,7 +82,8 @@
 		0E39AD1A2E8D44FF00AF1300 = {
 			isa = PBXGroup;
 			children = (
-				0E93B7682E923B1F00C6D7C5 /* Resources */,
+				0EBBA9672E92951B00C741F7 /* Products.storekit */,
+				0E93B77E2E9241C100C6D7C5 /* Resources */,
 				0E39AD252E8D44FF00AF1300 /* bigbruhh */,
 				0E6DD06A2E8E86EF0043695B /* Frameworks */,
 				0E39AD242E8D44FF00AF1300 /* Products */,
@@ -97,22 +105,22 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		0E93B7682E923B1F00C6D7C5 /* Resources */ = {
+		0E93B77E2E9241C100C6D7C5 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				0E93B7692E923B3300C6D7C5 /* Audio */,
+				0E93B77F2E9241CC00C6D7C5 /* Audio */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		0E93B7692E923B3300C6D7C5 /* Audio */ = {
+		0E93B77F2E9241CC00C6D7C5 /* Audio */ = {
 			isa = PBXGroup;
 			children = (
-				0E93B76A2E923BDD00C6D7C5 /* glitch.mp3 */,
-				0E93B76B2E923BDD00C6D7C5 /* glitch-long.mp3 */,
-				0E93B76C2E923BDD00C6D7C5 /* sub_bass.mp3 */,
-				0E93B76D2E923BDD00C6D7C5 /* success.mp3 */,
-				0E93B76E2E923BDD00C6D7C5 /* ticking-clock.mp3 */,
+				0E93B7842E92715200C6D7C5 /* glitch.mp3 */,
+				0E93B7862E92716C00C6D7C5 /* sub_bass.mp3 */,
+				0E93B7872E92716C00C6D7C5 /* success.mp3 */,
+				0E93B7882E92716C00C6D7C5 /* ticking-clock.mp3 */,
+				0E93B78C2E92717900C6D7C5 /* glitch-long.mp3 */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -198,6 +206,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0EBBA9682E92951B00C741F7 /* Products.storekit in Resources */,
+				0E93B7852E92715200C6D7C5 /* glitch.mp3 in Resources */,
+				0E93B7892E92716C00C6D7C5 /* sub_bass.mp3 in Resources */,
+				0E93B78A2E92716C00C6D7C5 /* ticking-clock.mp3 in Resources */,
+				0E93B78D2E92717900C6D7C5 /* glitch-long.mp3 in Resources */,
+				0E93B78B2E92716C00C6D7C5 /* success.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,7 +370,6 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "BigBruh needs microphone access for voice responses and accountability calls";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarHidden = NO;
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -366,7 +379,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rinshinjalal.bigbruhh;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rinshinjalal.yourbigbruhh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -395,7 +408,6 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "BigBruh needs microphone access for voice responses and accountability calls";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarHidden = NO;
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -405,7 +417,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rinshinjalal.bigbruhh;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rinshinjalal.yourbigbruhh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
