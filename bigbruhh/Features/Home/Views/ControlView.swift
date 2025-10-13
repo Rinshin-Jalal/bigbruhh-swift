@@ -10,9 +10,13 @@ import SwiftUI
 struct ControlView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var navigator: AppNavigator
+    @StateObject private var cacheManager = DataCacheManager.shared
+    
     @State private var callWindowStart: Date = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
     @State private var showTimePicker: Bool = false
     @State private var loading: Bool = false
+    @State private var isRefreshing: Bool = false
+    @State private var extractionStatus: String = ""
 
     var body: some View {
         ZStack {
@@ -113,6 +117,124 @@ struct ControlView: View {
                 )
             }
             .buttonStyle(.plain)
+
+    // DEBUG: Secret Plan Button
+    Button(action: {
+        navigator.showSecretPlan(userName: "BigBruh", source: "debug")
+    }) {
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("DEBUG: SECRET PLAN")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .tracking(1)
+
+                    Spacer()
+
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                Text("Test the secret plan paywall flow")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color(white: 0.8, opacity: 1.0))
+                    .lineSpacing(4)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color(hex: "#FFD700"))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: "#B8860B"), lineWidth: 3)
+        )
+    }
+    .buttonStyle(.plain)
+
+    // DEBUG: Brutal Reality Button
+    Button(action: {
+        BrutalRealityManager.shared.triggerBrutalRealityManually()
+    }) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("DEBUG: BRUTAL REALITY")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .tracking(1)
+
+                            Spacer()
+
+                            Image(systemName: "eye.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+
+                        Text("Test the brutal reality mirror")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color(white: 0.8, opacity: 1.0))
+                            .lineSpacing(4)
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity)
+                .background(Color(hex: "#DC143C"))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "#8B0000"), lineWidth: 3)
+                )
+            }
+            .buttonStyle(.plain)
+
+            // DEBUG: Identity Extraction Button
+            Button(action: {
+                triggerIdentityExtraction()
+            }) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("DEBUG: IDENTITY EXTRACTION")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .tracking(1)
+
+                            Spacer()
+
+                            Image(systemName: "brain.head.profile")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+
+                        Text("Trigger AI identity extraction manually")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color(white: 0.8, opacity: 1.0))
+                            .lineSpacing(4)
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity)
+                .background(Color(hex: "#00CED1"))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "#008B8B"), lineWidth: 3)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(loading)
+
+            // Status Display
+            if !extractionStatus.isEmpty {
+                Text(extractionStatus)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(white: 0.7))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
             #endif
 
             // Modify Window Button
@@ -269,6 +391,39 @@ struct ControlView: View {
     private func handleSignOut() {
         Task {
             try? await authService.signOut()
+        }
+    }
+
+    private func triggerIdentityExtraction() {
+        guard let userId = authService.user?.id else {
+            extractionStatus = "❌ No user ID found"
+            return
+        }
+
+        loading = true
+        extractionStatus = "🔄 Triggering identity extraction..."
+
+        Task {
+            do {
+                let response: APIResponse<[String: AnyCodableValue]> = try await APIService.shared.post(
+                    "/onboarding/extract-data",
+                    body: [:]
+                )
+
+                await MainActor.run {
+                    if response.success {
+                        extractionStatus = "✅ Identity extraction completed successfully"
+                    } else {
+                        extractionStatus = "❌ Identity extraction failed: \(response.error ?? "Unknown error")"
+                    }
+                    loading = false
+                }
+            } catch {
+                await MainActor.run {
+                    extractionStatus = "❌ Identity extraction error: \(error.localizedDescription)"
+                    loading = false
+                }
+            }
         }
     }
 }

@@ -15,7 +15,9 @@ class OnboardingState: ObservableObject, Codable {
     @Published var currentStep: Int                      // 1-45 BigBruh steps
     @Published var responses: [Int: UserResponse]        // Step ID -> Response
     @Published var brotherName: String                   // User's chosen "brother" name
-    @Published var userName: String?                     // User's real name
+    @Published var userName: String?                     // User's real name (extracted from step 3)
+    @Published var callTime: String?                     // Call time (extracted from step 37 - time_window_picker)
+    @Published var userTimezone: String?                // User's timezone (auto-detected from iOS)
     @Published var isCompleted: Bool
     @Published var startedAt: Date
     @Published var completedAt: Date?
@@ -27,6 +29,8 @@ class OnboardingState: ObservableObject, Codable {
         case responses
         case brotherName
         case userName
+        case callTime
+        case userTimezone
         case isCompleted
         case startedAt
         case completedAt
@@ -39,6 +43,8 @@ class OnboardingState: ObservableObject, Codable {
         responses: [Int: UserResponse] = [:],
         brotherName: String = "",
         userName: String? = nil,
+        callTime: String? = nil,
+        userTimezone: String? = nil,
         isCompleted: Bool = false,
         startedAt: Date = Date(),
         completedAt: Date? = nil
@@ -47,6 +53,8 @@ class OnboardingState: ObservableObject, Codable {
         self.responses = responses
         self.brotherName = brotherName
         self.userName = userName
+        self.callTime = callTime
+        self.userTimezone = userTimezone ?? TimeZone.current.identifier // Auto-detect iOS timezone
         self.isCompleted = isCompleted
         self.startedAt = startedAt
         self.completedAt = completedAt
@@ -60,6 +68,8 @@ class OnboardingState: ObservableObject, Codable {
         responses = try container.decode([Int: UserResponse].self, forKey: .responses)
         brotherName = try container.decode(String.self, forKey: .brotherName)
         userName = try container.decodeIfPresent(String.self, forKey: .userName)
+        callTime = try container.decodeIfPresent(String.self, forKey: .callTime)
+        userTimezone = try container.decodeIfPresent(String.self, forKey: .userTimezone) ?? TimeZone.current.identifier
         isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
         startedAt = try container.decode(Date.self, forKey: .startedAt)
         completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
@@ -71,6 +81,8 @@ class OnboardingState: ObservableObject, Codable {
         try container.encode(responses, forKey: .responses)
         try container.encode(brotherName, forKey: .brotherName)
         try container.encodeIfPresent(userName, forKey: .userName)
+        try container.encodeIfPresent(callTime, forKey: .callTime)
+        try container.encodeIfPresent(userTimezone, forKey: .userTimezone)
         try container.encode(isCompleted, forKey: .isCompleted)
         try container.encode(startedAt, forKey: .startedAt)
         try container.encodeIfPresent(completedAt, forKey: .completedAt)
@@ -80,7 +92,36 @@ class OnboardingState: ObservableObject, Codable {
 
     func saveResponse(_ response: UserResponse) {
         responses[response.stepId] = response
+        
+        // Extract specific values from responses
+        extractSpecialValues()
     }
+    
+    // MARK: - Value Extraction
+    
+    private func extractSpecialValues() {
+        // Extract userName from step 3 (identity_name)
+        if let step3Response = responses[3],
+           case .text(let name) = step3Response.value {
+            userName = name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            print("✅ Extracted userName from step 3: \(userName ?? "nil")")
+        }
+        
+        // Extract callTime from step 37 (time_window_picker)
+        if let step37Response = responses[37],
+           step37Response.type == .timeWindowPicker,
+           case .timeWindow(let timeWindow) = step37Response.value {
+            callTime = timeWindow.start
+            print("📞 Extracted callTime from step 37: \(callTime ?? "nil")")
+        }
+        
+        // Auto-detect iOS timezone (no manual selection needed)
+        if userTimezone == nil {
+            userTimezone = TimeZone.current.identifier
+            print("🌍 Auto-detected iOS timezone: \(userTimezone ?? "nil")")
+        }
+    }
+    
 
     func getResponse(for stepId: Int) -> UserResponse? {
         return responses[stepId]

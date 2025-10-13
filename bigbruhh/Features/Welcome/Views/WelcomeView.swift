@@ -27,7 +27,7 @@ struct WelcomeView: View {
                     // Main Content - Logo and Description in Middle
                     VStack(spacing: 20) {
                         // Header with logo - Full Width, Height scales with width
-                        Image("logo-red")
+                        Image("logo-white-no-bg")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(maxWidth: .infinity)
@@ -94,7 +94,7 @@ struct WelcomeView: View {
                         Button(action: handleSignIn) {
                             Text("Already have an account? Sign in")
                                 .font(.system(size: 14, weight: .regular, design: .default))
-                                .foregroundColor(Color.brutalRedLight.opacity(0.7))
+                                .foregroundColor(Color.white.opacity(0.7))
                                 .kerning(0.5)
                         }
                     }
@@ -142,7 +142,7 @@ struct WelcomeView: View {
     private func handleSignIn() {
         print("🔑 Sign in tapped")
         triggerHaptic(intensity: 0.3)
-        // TODO: Show sign in view
+        navigator.showLogin()
     }
 }
 

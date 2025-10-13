@@ -18,6 +18,7 @@ import AVFoundation
 
 struct VoiceStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -38,8 +39,9 @@ struct VoiceStep: View {
 
     private let minDuration: Int
 
-    init(step: StepDefinition, backgroundColor: Color, textColor: Color, accentColor: Color, secondaryAccentColor: Color, onContinue: @escaping (UserResponse) -> Void) {
+    init(step: StepDefinition, promptResolver: any PromptResolving, backgroundColor: Color, textColor: Color, accentColor: Color, secondaryAccentColor: Color, onContinue: @escaping (UserResponse) -> Void) {
         self.step = step
+        self.promptResolver = promptResolver
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.accentColor = accentColor
@@ -80,7 +82,7 @@ struct VoiceStep: View {
 
             VStack(spacing: 0) {
                 // Prompt at top
-                Text(step.prompt)
+                Text(step.resolvedPrompt(using: promptResolver))
                     .font(.system(size: 28, weight: .bold))
                     .tracking(1.5)
                     .lineSpacing(-8)
@@ -176,9 +178,10 @@ struct VoiceStep: View {
                                     HStack(spacing: 8) {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 14))
-                                            .foregroundColor(textColor)
+                                            .foregroundColor(recordingDuration >= minDuration ? Color.buttonTextColor(for: accentColor) : nil)
                                         Text(recordingDuration < minDuration ? "NEED \(minDuration - recordingDuration)s" : "SUBMIT")
-                                            .font(.system(size: 14, weight: .bold))            .foregroundColor(textColor)
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(recordingDuration >= minDuration ? Color.buttonTextColor(for: accentColor) : nil)
                                             .tracking(1)
                                             .textCase(.uppercase)
                                     }
@@ -213,8 +216,10 @@ struct VoiceStep: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 14))
+                                        .foregroundColor(recordingDuration >= minDuration ? Color.buttonTextColor(for: accentColor) : nil)
                                     Text(recordingDuration < minDuration ? "NEED \(minDuration - recordingDuration)s" : "SUBMIT")
                                         .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(recordingDuration >= minDuration ? Color.buttonTextColor(for: accentColor) : nil)
                                         .tracking(1)
                                         .textCase(.uppercase)
                                 }
@@ -341,14 +346,23 @@ struct VoiceStep: View {
                     throw NSError(domain: "VoiceStep", code: 1, userInfo: [NSLocalizedDescriptionKey: "No audio data"])
                 }
 
-                // Convert to base64
-                let base64Audio = audioData.base64EncodedString()
-                let dataUrl = "data:audio/m4a;base64,\(base64Audio)"
+                // Save audio file and store file path instead of base64
+                let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                let audioFileName = "voice_\(step.id)_\(Date().timeIntervalSince1970).m4a"
+                let audioFileURL = documentsPath.appendingPathComponent(audioFileName)
+                
+                do {
+                    try audioData.write(to: audioFileURL)
+                    print("✅ Audio saved to: \(audioFileURL.path)")
+                } catch {
+                    print("❌ Failed to save audio file: \(error)")
+                    throw error
+                }
 
                 let response = UserResponse(
                     stepId: step.id,
                     type: .voice,
-                    value: .text(dataUrl),
+                    value: .text(audioFileURL.path),
                     timestamp: Date(),
                     duration: Double(recordingDuration),
                     dbField: step.dbField
@@ -357,7 +371,7 @@ struct VoiceStep: View {
                 print("\n🎤 === VOICE RECORDING SUBMITTED ===")
                 print("🔢 Step \(step.id):")
                 print("  🎤 Duration: \(recordingDuration)s")
-                print("  📊 Base64 length: \(base64Audio.count) chars")
+                print("  📁 File path: \(audioFileURL.path)")
                 print("  ⏰ Timestamp: \(response.timestamp)")
                 print("🎤 === VOICE SUBMITTED ===\n")
 
@@ -718,6 +732,7 @@ class AudioRecorderManager: NSObject, AVAudioRecorderDelegate {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#90FD0E"),

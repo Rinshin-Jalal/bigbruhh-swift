@@ -7,9 +7,11 @@
 //
 
 import SwiftUI
+import Combine
 
 struct LongPressStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -41,7 +43,7 @@ struct LongPressStep: View {
             VStack(spacing: 0) {
                 // Prompt at top - hidden when pressed
                 VStack(alignment: .leading) {
-                    Text(step.prompt)
+                    Text(step.resolvedPrompt(using: promptResolver))
                         .font(.system(size: 32, weight: .bold))
                         .tracking(1.5)
                         .lineSpacing(3)
@@ -97,12 +99,20 @@ struct LongPressStep: View {
                         .scaleEffect(buttonScale)
                         .opacity(buttonOpacity)
                         .simultaneousGesture(
-                            DragGesture(minimumDistance: 0)
+                            LongPressGesture(minimumDuration: 0)
                                 .onChanged { _ in
                                     if !isPressed && !isCompleting {
                                         handlePressIn()
                                     }
                                 }
+                                .onEnded { _ in
+                                    if isPressed {
+                                        handlePressOut()
+                                    }
+                                }
+                        )
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 0)
                                 .onEnded { _ in
                                     if isPressed {
                                         handlePressOut()
@@ -204,8 +214,8 @@ struct LongPressStep: View {
         progressText = "YOU BROKE. TRY AGAIN."
         triggerHaptic(intensity: 1.0)
 
-        // Drain effect - rapid reverse
-        withAnimation(.easeOut(duration: 0.4)) {
+        // Stop all animations and reset progress immediately
+        withAnimation(.none) {
             progress = 0
         }
 
@@ -229,7 +239,7 @@ struct LongPressStep: View {
             buttonScale = 1.0
         }
 
-        // Clear timers
+        // Clear timers immediately to stop all progress
         cleanupTimers()
 
         // Clear error text after delay
@@ -333,6 +343,7 @@ extension View {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#90FD0E"),

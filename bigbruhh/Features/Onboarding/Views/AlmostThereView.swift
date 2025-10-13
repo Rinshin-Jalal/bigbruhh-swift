@@ -252,10 +252,11 @@ struct AlmostThereView: View {
     }
 
     private func markAlmostThereCompleted() {
-        // TODO: Update user profile in Supabase to mark almostThereCompleted as true
-        // For now, just navigate to home
+        // NOTE: almostThereCompleted field doesn't exist in database
+        // Navigation is handled by RootView based on onboarding_completed flag
+        // This function just navigates to home directly
         navigateToHome = true
-        print("✅ Almost There flow completed - user can now access home")
+        print("✅ Almost There flow completed - navigating to home")
     }
 
     // MARK: - Haptics

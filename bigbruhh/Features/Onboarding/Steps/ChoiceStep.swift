@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ChoiceStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -30,12 +31,11 @@ struct ChoiceStep: View {
         VStack(spacing: 0) {
             // Prompt text
             HStack {
-                Text(step.prompt)
+                Text(step.resolvedPrompt(using: promptResolver))
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(textColor)
                     .tracking(1.5)
                     .lineSpacing(-2)
-                    .textCase(.uppercase)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.top, 60)
@@ -252,6 +252,7 @@ struct ChoiceStep: View {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#DC143C"),

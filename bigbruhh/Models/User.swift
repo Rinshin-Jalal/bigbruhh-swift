@@ -13,10 +13,16 @@ struct User: Codable, Identifiable {
     let createdAt: Date?
     let updatedAt: Date?
     let revenuecatCustomerId: String?
+    let subscriptionStatus: String?
+    let timezone: String?
+    let callWindowStart: String?
+    let callWindowTimezone: String?
+    let voiceCloneId: String?
+    let pushToken: String?
     let onboardingCompleted: Bool?
-    let almostThereCompleted: Bool?
-    let callStreak: Int?
-    let currentGrade: String?
+    let onboardingCompletedAt: Date?
+    let scheduleChangeCount: Int?
+    let voiceRecloneCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -25,18 +31,20 @@ struct User: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case revenuecatCustomerId = "revenuecat_customer_id"
+        case subscriptionStatus = "subscription_status"
+        case timezone
+        case callWindowStart = "call_window_start"
+        case callWindowTimezone = "call_window_timezone"
+        case voiceCloneId = "voice_clone_id"
+        case pushToken = "push_token"
         case onboardingCompleted = "onboarding_completed"
-        case almostThereCompleted = "almost_there_completed"
-        case callStreak = "call_streak"
-        case currentGrade = "current_grade"
+        case onboardingCompletedAt = "onboarding_completed_at"
+        case scheduleChangeCount = "schedule_change_count"
+        case voiceRecloneCount = "voice_reclone_count"
     }
 
     var displayName: String {
         name ?? email?.components(separatedBy: "@").first ?? "User"
-    }
-
-    var grade: Grade {
-        Grade(rawValue: currentGrade ?? "F") ?? .f
     }
 }
 

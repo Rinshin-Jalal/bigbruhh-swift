@@ -9,6 +9,7 @@ import AuthenticationServices
 
 struct AuthView: View {
     @StateObject private var authService = AuthService.shared
+    @EnvironmentObject var navigator: AppNavigator
     @State private var signingIn = false
 
     // Animation states
@@ -19,9 +20,6 @@ struct AuthView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            Color.brutalBlack
-                .ignoresSafeArea()
 
             if authService.loading {
                 loadingView
@@ -54,72 +52,58 @@ struct AuthView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Header
-            VStack(spacing: Spacing.md) {
-                Text("BIG BRUH")
-                    .font(.headline)
-                    .foregroundColor(.brutalRedLight)
-                    .brutalStyle()
+            // Logo and Description
+            VStack() {
+                Image("logo-black-no-bg")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 280 )
                     .scaleEffect(pulseScale)
 
-                Text("Your transformation awaits.")
-                    .font(.title)
-                    .foregroundColor(.white)
-                    .opacity(0.9)
-
-                Text("No more excuses. No more weakness.")
-                    .font(.bodyRegular)
-                    .foregroundColor(.white)
-                    .opacity(0.7)
+                Text("Accountability begins now.")
+                    .font(.system(size: 18, weight: .medium, design: .default))
+                    .foregroundColor(.black)
+                    .opacity(0.8)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xl)
             }
-            .padding(.top, 60)
             .opacity(fadeInOpacity)
 
             Spacer()
 
-            // Auth Button
             VStack(spacing: Spacing.xl) {
                 SignInWithAppleButton(
                     .signIn,
                     onRequest: { request in
-                        request.requestedScopes = [.fullName, .email]
+                        authService.configureAppleRequest(request)
                     },
                     onCompletion: { result in
                         handleAppleSignIn(result)
                     }
                 )
                 .signInWithAppleButtonStyle(.white)
-                .frame(height: Spacing.buttonHeightLarge)
+                .frame(maxWidth: .infinity, maxHeight: 72)
                 .cornerRadius(Spacing.radiusMedium)
                 .overlay(
                     RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                        .stroke(Color.white, lineWidth: Spacing.borderMedium)
+                        .stroke(Color.black, lineWidth: Spacing.borderMedium)
                 )
-                .shadow(color: Color.white.opacity(0.2), radius: 8)
-                .scaleEffect(buttonGlowScale)
+                .shadow(color: Color.brutalBlack.opacity(0.2), radius: 12, x: 0, y: 0)
+                .shadow(color: Color.brutalBlack.opacity(0.15), radius: 24, x: 0, y: 12)
                 .disabled(signingIn)
 
                 if signingIn {
                     ProgressView()
-                        .tint(.white)
+                        .tint(.black)
                 }
             }
-            .padding(.horizontal, Spacing.xxl)
-            .padding(.vertical, Spacing.xxxl)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.xxxl)
+            .padding(.top, Spacing.lg)
             .opacity(fadeInOpacity)
             .offset(y: slideUpOffset)
 
             Spacer()
-
-            // Footer
-            Text("By continuing, you accept our Terms & transform your life.")
-                .font(.captionSmall)
-                .foregroundColor(.white)
-                .opacity(0.5)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.xxl)
-                .padding(.bottom, Spacing.xl)
-                .opacity(fadeInOpacity)
         }
     }
 
@@ -145,15 +129,34 @@ struct AuthView: View {
     // MARK: - Apple Sign In Handler
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         switch result {
-        case .success:
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                Config.log("Apple sign in returned unexpected credential", category: "Auth")
+                signingIn = false
+                return
+            }
+
             HapticManager.medium()
             signingIn = true
 
             Task {
                 do {
-                    try await authService.signInWithApple()
+                    try await authService.signInWithApple(credential: credential)
                     HapticManager.triggerNotification(.success)
                     Config.log("Apple sign in successful", category: "Auth")
+
+                    // Check if user has completed onboarding data to process
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if OnboardingDataManager.shared.hasCompletedOnboarding {
+                            // User has onboarding data - go to processing to push it
+                            Config.log("Completed onboarding data found - going to ProcessingView", category: "Auth")
+                            navigator.showProcessing()
+                        } else {
+                            // No onboarding data - RootView will handle navigation
+                            // (will check auth + onboarding_completed flag from DB)
+                            Config.log("No completed onboarding data - letting RootView determine next screen", category: "Auth")
+                        }
+                    }
                 } catch {
                     HapticManager.triggerNotification(.error)
                     Config.log("Apple sign in failed: \(error)", category: "Auth")

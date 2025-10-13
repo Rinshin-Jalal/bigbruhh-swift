@@ -10,6 +10,7 @@ import SwiftUI
 
 struct TextStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -72,11 +73,10 @@ struct TextStep: View {
     private var inputPhase: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Prompt
-            Text(step.prompt)
+            Text(step.resolvedPrompt(using: promptResolver))
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(textColor)
                 .tracking(2)
-                .textCase(.uppercase)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Helper text
@@ -282,6 +282,7 @@ extension View {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#DC143C"),

@@ -11,6 +11,7 @@ struct PaywallContainerView: View {
     @EnvironmentObject var navigator: AppNavigator
     @EnvironmentObject var onboardingData: OnboardingDataManager
     @EnvironmentObject var revenueCat: RevenueCatService
+    @EnvironmentObject var authService: AuthService
     @Environment(\.dismiss) private var dismiss
 
     let source: String
@@ -39,11 +40,27 @@ struct PaywallContainerView: View {
     // MARK: - Handlers
 
     private func handlePurchaseComplete() {
-        print("✅ Purchase completed - navigating to home")
+        print("✅ Purchase completed - determining next screen")
 
-        // Navigate to home after purchase
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            navigator.showHome()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Check if user is already authenticated
+            if authService.isAuthenticated {
+                print("✅ User already authenticated - checking for onboarding data")
+                // User already signed in - check if they have onboarding data to process
+                if onboardingData.hasCompletedOnboarding {
+                    print("✅ Onboarding data found - going to ProcessingView")
+                    navigator.showProcessing()
+                } else {
+                    print("⚠️ No onboarding data - user already processed or never onboarded")
+                    // Let RootView handle it based on DB flags
+                    navigator.navigateToHome()
+                }
+            } else {
+                print("❌ User not authenticated - going to login screen")
+                // User not authenticated - need to sign in first
+                // Flow: Login → (AuthView checks for onboarding data) → ProcessingView or Home
+                navigator.showLogin()
+            }
         }
     }
 

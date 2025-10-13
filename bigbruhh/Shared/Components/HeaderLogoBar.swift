@@ -15,13 +15,10 @@ struct HeaderLogoBar: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
             Image("logo")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 300, height: 200)
-        }
-        .padding(.bottom, 10)
     }
 }
 

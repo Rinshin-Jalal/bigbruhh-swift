@@ -130,6 +130,43 @@
           ]
         }
       ]
+    },
+    {
+      "id" : "21509692",
+      "localizations" : [
+
+      ],
+      "name" : "Secret Plan",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "3.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6670836861",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Weekly Membership Secret",
+              "displayName" : "Weekly Membership Secret",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "bigbruhh_399_weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Secret Plan",
+          "subscriptionGroupID" : "21509692",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
     }
   ],
   "version" : {

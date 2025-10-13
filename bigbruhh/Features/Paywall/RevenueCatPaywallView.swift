@@ -77,6 +77,10 @@ struct RevenueCatPaywallView: View {
             await revenueCat.fetchCustomerInfo()
         }
 
+        // Store purchase info
+        UserDefaultsManager.set("normal", forKey: "plan_type")
+        UserDefaultsManager.set(source, forKey: "purchase_source")
+
         onPurchaseComplete()
     }
 

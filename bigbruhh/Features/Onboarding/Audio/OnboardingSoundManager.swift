@@ -22,6 +22,26 @@ class OnboardingSoundManager: ObservableObject {
     @Published var isAmbientPlaying = false
     private var currentAmbientFile: String?
 
+    private let milestoneSuccessSteps: Set<Int> = [
+        5,  // First psychological shift
+        7,  // "Think" voice confession
+        12, // "Kill potential" choice confrontation
+        16, // Confrontation peak
+        22, // Pattern admission
+        27, // Identity rebuild declaration
+        31, // Enemy naming
+        35, // War cry
+        39, // External anchor definition
+        43  // Final seal hold
+    ]
+
+    private let tickingAmbientSteps: Set<Int> = [
+        11, 12, 15, 16, // Late confrontation cadence
+        22, 23, 24, 26, // Pattern analysis pressure
+        32, 33, 34, 35, 36, // Commitment system rituals
+        39, 40, 41, 42, 43, 44 // External anchors and oath sealing
+    ]
+
     // MARK: - Initialization
 
     init() {
@@ -41,16 +61,16 @@ class OnboardingSoundManager: ObservableObject {
 
     private func loadAudioPlayers() {
         // Ambient loops
-        subBassPlayer = loadAudio(named: "sub_bass", type: "mp3", volume: 0.12)
+        subBassPlayer = loadAudio(named: "sub_bass", type: "mp3", volume: 0.04)
         subBassPlayer?.numberOfLoops = -1 // Infinite loop
 
-        tickingPlayer = loadAudio(named: "ticking-clock", type: "mp3", volume: 0.06)
+        tickingPlayer = loadAudio(named: "ticking-clock", type: "mp3", volume: 0.015)
         tickingPlayer?.numberOfLoops = -1
 
         // Sound effects (one-shots)
-        successPlayer = loadAudio(named: "success", type: "mp3", volume: 0.3)
-        glitchPlayer = loadAudio(named: "glitch", type: "mp3", volume: 0.4)
-        glitchLongPlayer = loadAudio(named: "glitch-long", type: "mp3", volume: 0.02)
+        successPlayer = loadAudio(named: "success", type: "mp3", volume: 0.08)
+        glitchPlayer = loadAudio(named: "glitch", type: "mp3", volume: 0.12)
+        glitchLongPlayer = loadAudio(named: "glitch-long", type: "mp3", volume: 0.006)
     }
 
     private func loadAudio(named name: String, type: String, volume: Float) -> AVAudioPlayer? {
@@ -73,28 +93,25 @@ class OnboardingSoundManager: ObservableObject {
     // MARK: - Ambient Music Logic
 
     /// Determines which ambient audio to play based on phase and step type
-    private func getContextualAudio(phase: OnboardingPhase, stepType: StepType, recordingTime: TimeInterval? = nil) -> String? {
-        // Voice step logic
-        if stepType == .voice {
-            if let time = recordingTime, time > 30 {
-                return "sub_bass"
-            }
-            if [.patternAwareness, .patternAnalysis].contains(phase) {
-                return "ticking"
-            }
+    private func getContextualAudio(phase: OnboardingPhase, stepType: StepType, stepId: Int, recordingTime: TimeInterval? = nil) -> String? {
+        if tickingAmbientSteps.contains(stepId) {
+            return "ticking"
         }
 
-        // Phase-based logic
-        if [.commitmentSystem, .externalAnchors, .finalOath].contains(phase) {
-            return "ticking"
+        if stepType == .voice, let time = recordingTime, time > 30 {
+            return "sub_bass"
+        }
+
+        if stepType == .voice, stepId >= 22, stepId <= 27 {
+            return "sub_bass"
         }
 
         return nil
     }
 
     /// Update ambient music based on current step
-    func updateAmbientForStep(phase: OnboardingPhase, stepType: StepType, recordingTime: TimeInterval? = nil) {
-        let selection = getContextualAudio(phase: phase, stepType: stepType, recordingTime: recordingTime)
+    func updateAmbientForStep(stepId: Int, phase: OnboardingPhase, stepType: StepType, recordingTime: TimeInterval? = nil) {
+        let selection = getContextualAudio(phase: phase, stepType: stepType, stepId: stepId, recordingTime: recordingTime)
 
         guard let audioFile = selection else {
             if isAmbientPlaying {
@@ -143,7 +160,8 @@ class OnboardingSoundManager: ObservableObject {
     // MARK: - Sound Effects
 
     /// Play success sound on step completion
-    func playSuccess() {
+    func playSuccess(for stepId: Int) {
+        guard milestoneSuccessSteps.contains(stepId) else { return }
         successPlayer?.currentTime = 0
         successPlayer?.play()
     }
@@ -156,13 +174,13 @@ class OnboardingSoundManager: ObservableObject {
 
     /// Play sharp snap sound for ritual moments
     func playSnap() {
-        successPlayer?.volume = 0.45
+        successPlayer?.volume = 0.2
         successPlayer?.currentTime = 0
         successPlayer?.play()
 
         // Reset volume for normal success sounds
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.successPlayer?.volume = 0.3
+            self?.successPlayer?.volume = 0.08
         }
     }
 

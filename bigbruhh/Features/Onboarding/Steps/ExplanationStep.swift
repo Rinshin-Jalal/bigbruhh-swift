@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ExplanationStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -99,7 +100,7 @@ struct ExplanationStep: View {
         typedText = ""
         showButton = false
 
-        let text = step.prompt
+        let text = step.resolvedPrompt(using: promptResolver)
         let chars = Array(text)
         var currentIndex = 0
 
@@ -164,6 +165,7 @@ struct ExplanationStep: View {
 #Preview {
     ExplanationStep(
         step: STEP_DEFINITIONS[0],
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#DC143C"),

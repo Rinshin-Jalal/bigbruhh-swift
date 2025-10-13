@@ -225,6 +225,7 @@ extension RevenueCatService: PurchasesDelegate {
 enum RevenueCatError: LocalizedError {
     case userCancelled
     case purchaseFailed(String)
+    case packageNotFound
 
     var errorDescription: String? {
         switch self {
@@ -232,6 +233,8 @@ enum RevenueCatError: LocalizedError {
             return "Purchase was cancelled"
         case .purchaseFailed(let message):
             return "Purchase failed: \(message)"
+        case .packageNotFound:
+            return "No weekly subscription package found"
         }
     }
 }

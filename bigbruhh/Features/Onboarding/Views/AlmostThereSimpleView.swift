@@ -52,7 +52,7 @@ struct AlmostThereSimpleView: View {
                             Spacer()
                             Text("COMMIT")
                                 .font(.system(size: 80, weight: .black))
-                                .foregroundColor(Color(hex: "#DC143C"))
+                                .foregroundColor(Color.brutalRed)
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

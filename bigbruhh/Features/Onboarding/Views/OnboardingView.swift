@@ -13,6 +13,8 @@ import Combine
 struct OnboardingView: View {
     let onComplete: () -> Void
 
+    private let promptResolver: any PromptResolving = StaticPromptResolver()
+
     @StateObject private var state = OnboardingState()
     @StateObject private var soundManager = OnboardingSoundManager()
     @Environment(\.dismiss) private var dismiss
@@ -106,6 +108,7 @@ struct OnboardingView: View {
             case .explanation:
                 ExplanationStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -117,6 +120,7 @@ struct OnboardingView: View {
             case .choice:
                 ChoiceStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -129,6 +133,7 @@ struct OnboardingView: View {
             case .text:
                 TextStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -140,6 +145,7 @@ struct OnboardingView: View {
             case .dualSliders:
                 DualSlidersStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -151,6 +157,7 @@ struct OnboardingView: View {
             case .timeWindowPicker:
                 TimePickerStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -163,6 +170,7 @@ struct OnboardingView: View {
             case .longPressActivate:
                 LongPressStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -175,6 +183,7 @@ struct OnboardingView: View {
             case .voice:
                 VoiceStep(
                     step: stepDef,
+                    promptResolver: promptResolver,
                     backgroundColor: getBackgroundColor(for: state.currentStep),
                     textColor: getTextColor(for: state.currentStep),
                     accentColor: getAccentColor(for: state.currentStep),
@@ -364,7 +373,7 @@ struct OnboardingView: View {
         let phase = getCurrentPhase()
 
         // White text on dark backgrounds
-        if [.warningInitiation, .excuseDiscovery, .excuseConfrontation, .externalAnchors, .finalOath].contains(phase) {
+        if [.warningInitiation, .excuseDiscovery, .excuseConfrontation, .externalAnchors,.finalOath].contains(phase) {
             return .white
         }
 
@@ -426,7 +435,7 @@ struct OnboardingView: View {
 
     private func advanceStep(response: UserResponse?) {
         triggerHaptic(intensity: 0.7)
-        soundManager.playSuccess()
+        soundManager.playSuccess(for: state.currentStep)
 
         // Save response if provided
         if let response = response {
@@ -459,6 +468,7 @@ struct OnboardingView: View {
     private func updateAmbientMusic() {
         guard let currentStep = getCurrentStepDefinition() else { return }
         soundManager.updateAmbientForStep(
+            stepId: currentStep.id,
             phase: currentStep.phase,
             stepType: currentStep.type
         )

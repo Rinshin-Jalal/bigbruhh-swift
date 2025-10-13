@@ -11,6 +11,7 @@ import Supabase
 import Auth
 import PostgREST
 import AuthenticationServices
+import CryptoKit
 
 typealias SupabaseSession = Auth.Session
 
@@ -20,10 +21,11 @@ class AuthService: ObservableObject {
 
     @Published var session: SupabaseSession? = nil
     @Published var user: User? = nil
-    @Published var loading = true
+    @Published var loading = false  // Start optimistically - loading screen almost never shows
     @Published var isAuthenticated = false
 
     private let supabase = SupabaseManager.shared.client
+    private var currentNonce: String?
 
     private init() {
         Task {
@@ -41,12 +43,46 @@ class AuthService: ObservableObject {
             if let session = session {
                 Config.log("Session found", category: "Auth")
                 await fetchUserProfile(userId: session.user.id.uuidString)
+            } else {
+                // No session - user is not authenticated
+                Config.log("No session found", category: "Auth")
+                isAuthenticated = false
+                user = nil
             }
         } catch {
             Config.log("No existing session: \(error)", category: "Auth")
+            // On error, assume no session
+            isAuthenticated = false
+            user = nil
         }
 
         loading = false
+        Config.log("AuthService initialization complete - loading: \(loading), authenticated: \(isAuthenticated)", category: "Auth")
+    }
+    
+    // MARK: - Auth Status Check
+    func checkAuthStatus() async {
+        Config.log("Checking auth status", category: "Auth")
+        
+        do {
+            session = try await supabase.auth.session
+            if let session = session {
+                Config.log("✅ User is authenticated", category: "Auth")
+                await fetchUserProfile(userId: session.user.id.uuidString)
+            } else {
+                Config.log("❌ No active session", category: "Auth")
+                await MainActor.run {
+                    isAuthenticated = false
+                    user = nil
+                }
+            }
+        } catch {
+            Config.log("❌ Auth check failed: \(error)", category: "Auth")
+            await MainActor.run {
+                isAuthenticated = false
+                user = nil
+            }
+        }
 
         // Listen for auth state changes
         for await state in supabase.auth.authStateChanges {
@@ -63,38 +99,39 @@ class AuthService: ObservableObject {
     }
 
     // MARK: - Sign In with Apple
-    func signInWithApple() async throws {
-        Config.log("Starting Apple Sign In", category: "Auth")
-
-        let appleIDProvider = ASAuthorizationAppleIDProvider()
-        let request = appleIDProvider.createRequest()
+    func configureAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
+        let nonce = NonceGenerator.randomNonce()
+        currentNonce = nonce
         request.requestedScopes = [.fullName, .email]
+        request.nonce = NonceGenerator.sha256(nonce)
+        Config.log("Apple Sign In request configured", category: "Auth")
+    }
 
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        let delegate = AppleSignInDelegate()
+    func signInWithApple(credential: ASAuthorizationAppleIDCredential) async throws {
+        Config.log("Handling Apple authorization credential", category: "Auth")
 
-        controller.delegate = delegate
-        controller.presentationContextProvider = delegate
-
-        controller.performRequests()
-
-        // Wait for the result
-        let credential = try await delegate.credential
-
-        // Sign in with Supabase
         guard let tokenData = credential.identityToken,
               let idToken = String(data: tokenData, encoding: .utf8) else {
+            currentNonce = nil
             throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid identity token"])
+        }
+
+        guard let nonce = currentNonce else {
+            throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing nonce"])
         }
 
         let session = try await supabase.auth.signInWithIdToken(
             credentials: .init(
                 provider: .apple,
-                idToken: idToken
+                idToken: idToken,
+                nonce: nonce
             )
         )
 
+        currentNonce = nil
+
         Config.log("Apple Sign In successful", category: "Auth")
+        self.session = session
 
         // Create user profile
         let fullName = credential.fullName
@@ -123,6 +160,9 @@ class AuthService: ObservableObject {
         isAuthenticated = false
         loading = false
 
+        // Clear all onboarding data
+        OnboardingDataManager.shared.clearAllData()
+
         Config.log("Sign out successful", category: "Auth")
     }
 
@@ -139,10 +179,16 @@ class AuthService: ObservableObject {
 
             user = response
             isAuthenticated = true
-            Config.log("User profile fetched", category: "Auth")
+            Config.log("User profile fetched successfully", category: "Auth")
 
         } catch {
             Config.log("Failed to fetch user profile: \(error)", category: "Auth")
+            // If profile fetch fails, user might not exist in users table
+            // but they still have a valid auth session
+            // Set authenticated to true but user to nil
+            isAuthenticated = true
+            user = nil
+            Config.log("Set authenticated=true with nil user due to profile fetch failure", category: "Auth")
         }
     }
 

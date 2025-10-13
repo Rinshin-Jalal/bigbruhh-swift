@@ -38,6 +38,22 @@ struct StepDefinition: Codable, Identifiable {
     }
 }
 
+protocol PromptResolving {
+    func resolve(prompt: String) -> String
+}
+
+struct StaticPromptResolver: PromptResolving {
+    func resolve(prompt: String) -> String {
+        return prompt
+    }
+}
+
+extension StepDefinition {
+    func resolvedPrompt(using resolver: any PromptResolving) -> String {
+        return resolver.resolve(prompt: prompt)
+    }
+}
+
 // MARK: - Convenience Extensions
 
 extension StepDefinition {

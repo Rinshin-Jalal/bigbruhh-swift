@@ -18,8 +18,9 @@ struct bigbruhhApp: App {
         Config.log("Supabase URL: \(Config.supabaseURL)", category: "Config")
         Config.log("RevenueCat Key: \(String(Config.revenueCatAPIKey.prefix(20)))...", category: "Config")
 
+        // Supabase handles session persistence automatically
         // Clear in-progress onboarding state on app restart
-        // Users must start onboarding from scratch each time
+        // This ensures users start fresh if they haven't completed onboarding
         OnboardingDataManager.shared.clearInProgressState()
 
         // RevenueCat is configured in RevenueCatService.shared.configure()

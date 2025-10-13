@@ -10,6 +10,7 @@ import SwiftUI
 
 struct DualSlidersStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -91,7 +92,7 @@ struct DualSlidersStep: View {
     private var currentPhaseView: some View {
         VStack(spacing: 0) {
             // Prompt at top
-            Text(getCurrentSlider()?.label ?? "")
+            Text(currentSliderTitle)
                 .font(.system(size: 32, weight: .bold))
                 .foregroundColor(textColor)
                 .tracking(1.5)
@@ -328,6 +329,19 @@ struct DualSlidersStep: View {
 
     // MARK: - Helpers
 
+    private var currentSliderTitle: String {
+        guard let current = getCurrentSlider() else {
+            return step.resolvedPrompt(using: promptResolver)
+        }
+
+        let trimmedLabel = current.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedLabel.isEmpty {
+            return step.resolvedPrompt(using: promptResolver)
+        }
+
+        return trimmedLabel
+    }
+
     private func getCurrentSlider() -> SliderConfig? {
         guard let sliders = step.sliders, activeSliderIndex < sliders.count else { return nil }
         return sliders[activeSliderIndex]
@@ -453,6 +467,7 @@ extension View {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#FFD700"),

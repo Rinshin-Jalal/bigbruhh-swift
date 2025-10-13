@@ -27,64 +27,185 @@ struct CallHistoryItem: Identifiable {
 }
 
 struct EvidenceView: View {
+    @EnvironmentObject var authService: AuthService
+    @StateObject private var cacheManager = DataCacheManager.shared
+
     @State private var callHistory: [CallHistoryItem] = []
+    @State private var actualCalls: [CallLogEntry] = []
     @State private var loading: Bool = false
+    @State private var loadError: String? = nil
+    @State private var selectedCall: CallHistoryItem?
+    @State private var showDetailModal: Bool = false
+    @State private var isRefreshing: Bool = false
 
     var body: some View {
         ZStack {
             Color.brutalBlack
                 .ignoresSafeArea()
 
+            PullToRefreshWrapper(onRefresh: {
+                await refreshData()
+            }) {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header with logo
                     HeaderLogoBar()
 
-                    // HERO EVIDENCE CARD - matches NRN
-                    heroEvidenceCard
+                    if loading {
+                        loadingView
+                    } else if let error = loadError {
+                        errorView(message: error)
+                    } else {
+                        // HERO EVIDENCE CARD - matches NRN
+                        heroEvidenceCard
 
-                    // Assessment Card
-                    Text("EVIDENCE ASSESSMENT")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(white: 0.7, opacity: 1.0))
-                        .tracking(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                        .padding(.bottom, 8)
+                        // Assessment Card
+                        Text("EVIDENCE ASSESSMENT")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(white: 0.7, opacity: 1.0))
+                            .tracking(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
 
-                    assessmentCard
+                        assessmentCard
 
-                    // Stats Grid
-                    Text("EVIDENCE STATS")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(white: 0.7, opacity: 1.0))
-                        .tracking(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                        .padding(.bottom, 8)
+                        // Stats Grid
+                        Text("EVIDENCE STATS")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(white: 0.7, opacity: 1.0))
+                            .tracking(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
 
-                    statsGrid
+                        statsGrid
 
-                    // Recent Evidence
-                    Text("RECENT EVIDENCE")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(white: 0.7, opacity: 1.0))
-                        .tracking(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                        .padding(.bottom, 8)
+                        // Recent Evidence
+                        Text("RECENT EVIDENCE")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(white: 0.7, opacity: 1.0))
+                            .tracking(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
 
-                    recentEvidenceList
+                        recentEvidenceList
 
-                    Spacer(minLength: 100)
+                        Spacer(minLength: 100)
+                    }
+                    }
                 }
+            }
+            .refreshable {
+                await loadCallHistory(forceRefresh: true)
             }
         }
         .onAppear {
-            loadCallHistory()
+            Task {
+                await loadCallHistory()
+            }
+        }
+        .sheet(isPresented: $showDetailModal) {
+            if let call = selectedCall {
+                EvidenceDetailModal(call: call, onDismiss: {
+                    showDetailModal = false
+                })
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+    }
+    
+    // MARK: - Data Loading with Caching
+    
+    private func refreshData() async {
+        await loadCallHistory(forceRefresh: true)
+    }
+    
+    private func loadCallHistory(forceRefresh: Bool = false) async {
+        guard let userId = authService.user?.id else {
+            Config.log("❌ No authenticated user for call history", category: "Evidence")
+            await MainActor.run {
+                loadError = "Authentication required"
+                loading = false
+            }
+            return
+        }
+        
+        // Check cache first unless force refresh
+        if !forceRefresh {
+            if let cachedCalls: [CallLogEntry] = cacheManager.get(DataCacheManager.CacheKeys.callHistory, type: [CallLogEntry].self) {
+                Config.log("📦 Using cached call history", category: "Evidence")
+                await MainActor.run {
+                    actualCalls = cachedCalls
+                    callHistory = convertToCallHistoryItems(cachedCalls)
+                    loading = false
+                }
+                return
+            }
+        }
+        
+        await MainActor.run {
+            loading = true
+            loadError = nil
+        }
+        
+        do {
+            let response = try await APIService.shared.fetchCallHistory(userId: userId)
+            if response.success, let calls = response.data {
+                // Cache the data
+                cacheManager.set(DataCacheManager.CacheKeys.callHistory, data: calls)
+                
+                await MainActor.run {
+                    actualCalls = calls
+                    callHistory = convertToCallHistoryItems(calls)
+                    loading = false
+                }
+                Config.log("✅ Loaded call history from API", category: "Evidence")
+            } else {
+                // Fallback to mock data
+                await MainActor.run {
+                    callHistory = createMockCallHistory()
+                    loading = false
+                }
+                Config.log("📊 Using mock call history data", category: "Evidence")
+            }
+        } catch {
+            await MainActor.run {
+                // Fallback to mock data on error
+                callHistory = createMockCallHistory()
+                loadError = nil
+                loading = false
+            }
+            Config.log("❌ Failed to load call history: \(error)", category: "Evidence")
+        }
+    }
+    
+    private func convertToCallHistoryItems(_ calls: [CallLogEntry]) -> [CallHistoryItem] {
+        return calls.map { call in
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            // Use createdAt since startedAt was removed
+            let dateStr = formatter.string(from: call.createdAt)
+
+            formatter.dateFormat = "HH:mm"
+            let timeStr = formatter.string(from: call.createdAt)
+
+            return CallHistoryItem(
+                id: call.id,
+                date: dateStr,
+                time: timeStr,
+                duration: (call.durationSec ?? 0) / 60,
+                promisesAnalyzed: 0,  // TODO: Get from backend
+                promisesBroken: 0,    // TODO: Get from backend
+                promisesKept: 0,      // TODO: Get from backend
+                worstExcuse: nil,     // TODO: Get from backend
+                brutalReview: nil     // TODO: Get from backend
+            )
         }
     }
 
@@ -102,13 +223,11 @@ struct EvidenceView: View {
                 .tracking(2)
                 .multilineTextAlignment(.center)
         }
-        .padding(.vertical, 40)
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 250)
         .background(Color.black)
         .padding(.horizontal, 20)
-        .padding(.vertical, 20)
     }
 
     // MARK: - Assessment Card
@@ -206,7 +325,7 @@ struct EvidenceView: View {
 
     private var recentEvidenceList: some View {
         VStack(spacing: 12) {
-            ForEach(callHistory.prefix(3)) { call in
+            ForEach(callHistory.prefix(7)) { call in
                 evidenceCard(call: call)
             }
         }
@@ -214,47 +333,39 @@ struct EvidenceView: View {
         .padding(.bottom, 100)
     }
 
+
     private func evidenceCard(call: CallHistoryItem) -> some View {
         let isFail = call.promisesBroken > 0
         let bgColor = isFail ? Color(hex: "#DC143C") : Color(hex: "#C8E6C9")
         let borderColor = isFail ? Color(hex: "#8B0000") : Color(hex: "#88a88a")
         let textColor = isFail ? Color.white : Color.black
 
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        return HStack(alignment: .center, spacing: 12) {
+            // Date
                 Text(formatDateShort(call.date))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(textColor)
                     .tracking(1)
+                .frame(width: 80, alignment: .leading)
 
-                Spacer()
-
+            // Status
                 Text(isFail ? "FAIL" : "PASS")
                     .font(.system(size: 14, weight: .black))
                     .foregroundColor(textColor)
                     .tracking(2)
-            }
+                .frame(width: 50, alignment: .center)
 
-            if let review = call.brutalReview {
-                Text(review.paragraph)
-                    .font(.system(size: 13, weight: .semibold))
+            // Brief text preview
+            Text(call.brutalReview?.paragraph.prefix(60) ?? (call.worstExcuse?.prefix(40) ?? "Evidence analyzed") + "...")
+                .font(.system(size: 13, weight: .medium))
                     .foregroundColor(textColor)
                     .lineSpacing(4)
                     .lineLimit(2)
-            } else if let excuse = call.worstExcuse {
-                Text("\"\(excuse)\"")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(textColor)
-                    .lineSpacing(4)
-                    .lineLimit(2)
-                    .italic()
-            } else {
-                Text("Evidence analyzed")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(textColor)
-            }
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(bgColor)
         .cornerRadius(10)
@@ -262,6 +373,10 @@ struct EvidenceView: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(borderColor, lineWidth: 3)
         )
+        .onTapGesture {
+            selectedCall = call
+            showDetailModal = true
+        }
     }
 
     // MARK: - Computed Properties
@@ -269,8 +384,21 @@ struct EvidenceView: View {
     private var dominantPattern: String {
         if callHistory.isEmpty { return "NO EVIDENCE" }
 
-        let patterns = callHistory.compactMap { $0.brutalReview?.patternIdentified }
-        return patterns.first ?? "ANALYZING PATTERNS"
+        // Count patterns from brutal reviews
+        var patternCounts: [String: Int] = [:]
+        for call in callHistory {
+            if let pattern = call.brutalReview?.patternIdentified {
+                patternCounts[pattern] = (patternCounts[pattern] ?? 0) + 1
+            }
+        }
+
+        if patternCounts.isEmpty {
+            return "ANALYZING PATTERNS"
+        }
+
+        // Return the most common pattern
+        let mostCommon = patternCounts.max { $0.value < $1.value }
+        return mostCommon?.key.replacingOccurrences(of: "_", with: " ").uppercased() ?? "UNKNOWN"
     }
 
     private var evidenceAssessment: String {
@@ -305,6 +433,7 @@ struct EvidenceView: View {
         callHistory.filter { $0.brutalReview?.patternIdentified != nil }.count
     }
 
+
     private func formatDateShort(_ dateString: String) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -322,64 +451,371 @@ struct EvidenceView: View {
         }
     }
 
-    // MARK: - Data Loading
 
-    private func loadCallHistory() {
-        // TODO: Load from API
-        // Mock data matching NRN test data
-        callHistory = [
+    private func loadCallHistory() async -> [CallHistoryItem] {
+        // Try to load real call history from API first
+        guard let userId = AuthService.shared.user?.id else {
+            Config.log("❌ No authenticated user for call history", category: "Evidence")
+            return createMockCallHistory()
+        }
+        
+        do {
+            let response = try await APIService.shared.fetchCallHistory(userId: userId)
+            if response.success, let calls = response.data {
+                Config.log("✅ Loaded call history from API", category: "Evidence")
+                return calls.map { call in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    // Use createdAt since startedAt was removed
+                    let dateStr = formatter.string(from: call.createdAt)
+
+                    formatter.dateFormat = "HH:mm"
+                    let timeStr = formatter.string(from: call.createdAt)
+
+                    return CallHistoryItem(
+                        id: call.id,
+                        date: dateStr,
+                        time: timeStr,
+                        duration: (call.durationSec ?? 0) / 60,
+                        promisesAnalyzed: 0,  // TODO: Get from backend
+                        promisesBroken: 0,    // TODO: Get from backend
+                        promisesKept: 0,      // TODO: Get from backend
+                        worstExcuse: nil,     // TODO: Get from backend
+                        brutalReview: nil     // TODO: Get from backend
+                    )
+                }
+            }
+        } catch {
+            Config.log("❌ Failed to load call history from API: \(error)", category: "Evidence")
+        }
+        
+        // Fallback to mock data
+        Config.log("📊 Using mock call history data", category: "Evidence")
+        return createMockCallHistory()
+    }
+    
+    private func createMockCallHistory() -> [CallHistoryItem] {
+        // Comprehensive mock data for testing multiple scenarios
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let today = Date()
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: today)!
+        let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: today)!
+        let fourDaysAgo = Calendar.current.date(byAdding: .day, value: -4, to: today)!
+
+        return [
+            // TODAY - Mixed results with brutal review
             CallHistoryItem(
-                id: "1",
-                date: ISO8601DateFormatter().string(from: Date()).prefix(10).description,
+                id: "today-morning",
+                date: formatter.string(from: today),
                 time: "08:30",
-                duration: 7,
-                promisesAnalyzed: 5,
-                promisesBroken: 4,
-                promisesKept: 1,
-                worstExcuse: "I was too tired and stressed from work",
-                brutalReview: CallHistoryItem.BrutalReview(
-                    paragraph: "Another pathetic display of weakness. You made 5 promises and broke 4 of them like the unreliable person you've always been.",
-                    impactScore: 8,
-                    dominantEmotion: "DISAPPOINTMENT",
-                    patternIdentified: "CHRONIC EXCUSE-MAKER"
-                )
-            ),
-            CallHistoryItem(
-                id: "2",
-                date: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-86400)).prefix(10).description,
-                time: "20:15",
-                duration: 6,
-                promisesAnalyzed: 3,
-                promisesBroken: 2,
-                promisesKept: 1,
-                worstExcuse: "Netflix had a new season of my show",
-                brutalReview: CallHistoryItem.BrutalReview(
-                    paragraph: "You chose entertainment over your commitments. Again. This is why you're stuck in the same place while others move forward.",
-                    impactScore: 7,
-                    dominantEmotion: "SHAME",
-                    patternIdentified: "INSTANT GRATIFICATION SEEKER"
-                )
-            ),
-            CallHistoryItem(
-                id: "3",
-                date: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-2 * 86400)).prefix(10).description,
-                time: "07:45",
-                duration: 5,
+                duration: 15,
                 promisesAnalyzed: 4,
-                promisesBroken: 4,
-                promisesKept: 0,
-                worstExcuse: "My phone battery died and I forgot",
+                promisesBroken: 2,
+                promisesKept: 2,
+                worstExcuse: "I didn't have time this morning",
                 brutalReview: CallHistoryItem.BrutalReview(
-                    paragraph: "Zero promises kept. ZERO. This is rock bottom performance. You're not even trying anymore.",
-                    impactScore: 9,
-                    dominantEmotion: "DISGUST",
-                    patternIdentified: "SERIAL PROMISE-BREAKER"
+                    paragraph: "You broke two promises today before the sun had even fully risen. The excuses flowed as naturally as your breath, each one a well-rehearsed lie you've told yourself a thousand times before. Time management isn't your problem - self-deception is.",
+                    impactScore: 92,
+                    dominantEmotion: "shame",
+                    patternIdentified: "morning_excuse_patterns"
                 )
+            ),
+
+            // YESTERDAY - Perfect day
+            CallHistoryItem(
+                id: "yesterday-evening",
+                date: formatter.string(from: yesterday),
+                time: "21:15",
+                duration: 12,
+                promisesAnalyzed: 3,
+                promisesBroken: 0,
+                promisesKept: 3,
+                worstExcuse: nil,
+                brutalReview: nil
+            ),
+
+            // TWO DAYS AGO - Complete failure with rage
+            CallHistoryItem(
+                id: "two-days-ago",
+                date: formatter.string(from: twoDaysAgo),
+                time: "19:45",
+                duration: 8,
+                promisesAnalyzed: 5,
+                promisesBroken: 5,
+                promisesKept: 0,
+                worstExcuse: "Everything went wrong today, not my fault",
+                brutalReview: CallHistoryItem.BrutalReview(
+                    paragraph: "FIVE PROMISES. Five commitments you made to yourself and your future. Five opportunities to prove you're capable of change. And you failed every single one. The excuses you cling to are as pathetic as your willpower.",
+                    impactScore: 95,
+                    dominantEmotion: "rage",
+                    patternIdentified: "complete_systemic_failure"
+                )
+            ),
+
+            // THREE DAYS AGO - Partial success
+            CallHistoryItem(
+                id: "three-days-ago",
+                date: formatter.string(from: threeDaysAgo),
+                time: "07:15",
+                duration: 10,
+                promisesAnalyzed: 3,
+                promisesBroken: 1,
+                promisesKept: 2,
+                worstExcuse: "I forgot about that one",
+                brutalReview: nil
+            ),
+
+            // FOUR DAYS AGO - Good day with despair trigger
+            CallHistoryItem(
+                id: "four-days-ago",
+                date: formatter.string(from: fourDaysAgo),
+                time: "20:30",
+                duration: 14,
+                promisesAnalyzed: 4,
+                promisesBroken: 0,
+                promisesKept: 4,
+                worstExcuse: nil,
+                brutalReview: CallHistoryItem.BrutalReview(
+                    paragraph: "You kept all four promises today. This should feel like progress, but instead it fills you with dread because you know deep down that tomorrow you'll be right back to your old patterns. Success is terrifying when failure feels inevitable.",
+                    impactScore: 88,
+                    dominantEmotion: "despair",
+                    patternIdentified: "success_anxiety"
+                )
+            ),
+
+            // FIVE DAYS AGO - Mixed with excuse pattern
+            CallHistoryItem(
+                id: "five-days-ago",
+                date: formatter.string(from: Calendar.current.date(byAdding: .day, value: -5, to: today)!),
+                time: "18:20",
+                duration: 11,
+                promisesAnalyzed: 3,
+                promisesBroken: 1,
+                promisesKept: 2,
+                worstExcuse: "I was overwhelmed with work",
+                brutalReview: CallHistoryItem.BrutalReview(
+                    paragraph: "You broke another promise today, using the same 'overwhelmed' excuse you've used 17 times this month. Your work isn't the problem - your inability to prioritize what actually matters is.",
+                    impactScore: 76,
+                    dominantEmotion: "disappointment",
+                    patternIdentified: "work_overwhelm_excuse"
+                )
+            ),
+
+            // SIX DAYS AGO - Good streak building
+            CallHistoryItem(
+                id: "six-days-ago",
+                date: formatter.string(from: Calendar.current.date(byAdding: .day, value: -6, to: today)!),
+                time: "08:00",
+                duration: 13,
+                promisesAnalyzed: 3,
+                promisesBroken: 0,
+                promisesKept: 3,
+                worstExcuse: nil,
+                brutalReview: nil
             )
         ]
     }
+
+    // MARK: - Loading & Error Views
+
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(.white)
+
+            Text("Loading evidence...")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 100)
+    }
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(.brutalRed)
+
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .multilineTextAlignment(.center)
+
+            Button(action: {
+                Task {
+                    await loadCallHistory(forceRefresh: true)
+                }
+            }) {
+                Text("Retry")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.brutalRed)
+                    .cornerRadius(8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 40)
+        .padding(.top, 100)
+    }
+}
+
+// MARK: - Evidence Detail Modal
+
+struct EvidenceDetailModal: View {
+    let call: CallHistoryItem
+    let onDismiss: () -> Void
+
+    private func formatDateShort(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: dateString) else { return dateString }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "TODAY"
+        } else if calendar.isDateInYesterday(date) {
+            return "YESTERDAY"
+        } else {
+            let shortFormatter = DateFormatter()
+            shortFormatter.dateFormat = "MMM d"
+            return shortFormatter.string(from: date).uppercased()
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Color.brutalBlack
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header
+                    HStack {
+                        Text(formatDateShort(call.date))
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                            .tracking(2)
+
+                        Spacer()
+
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+
+                    // Status and duration
+                    HStack {
+                        Text(call.promisesBroken > 0 ? "FAIL" : "PASS")
+                            .font(.system(size: 18, weight: .black))
+                            .foregroundColor(call.promisesBroken > 0 ? Color(hex: "#DC143C") : Color(hex: "#4CAF50"))
+                            .tracking(2)
+
+                        Spacer()
+
+                        Text("\(call.duration)min")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    // Promise breakdown
+                    if call.promisesAnalyzed > 0 {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("PROMISE BREAKDOWN")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white.opacity(0.8))
+                                .tracking(1)
+
+                            HStack(spacing: 20) {
+                                statItem(label: "Analyzed", value: call.promisesAnalyzed, color: .white.opacity(0.7))
+                                statItem(label: "Kept", value: call.promisesKept, color: Color(hex: "#4CAF50"))
+                                statItem(label: "Broken", value: call.promisesBroken, color: Color(hex: "#F44336"))
+                            }
+                        }
+                    }
+
+                    // Content
+                    if let review = call.brutalReview {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("BRUTAL REALITY")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Color(hex: "#FFA500"))
+                                .tracking(2)
+
+                            Text(review.paragraph)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white)
+                                .lineSpacing(6)
+                                .multilineTextAlignment(.leading)
+                        }
+                    } else if let excuse = call.worstExcuse {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("EXCUSE USED")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white.opacity(0.6))
+                                .tracking(2)
+
+                            Text("\"\(excuse)\"")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white)
+                                .italic()
+                                .lineSpacing(6)
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding(20)
+            }
+        }
+    }
+
+    private func statItem(label: String, value: Int, color: Color) -> some View {
+        VStack(alignment: .center, spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(color)
+
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color.opacity(0.8))
+                .tracking(1)
+        }
+    }
+
+}
+
+#Preview {
+    EvidenceDetailModal(
+        call: CallHistoryItem(
+            id: "test",
+            date: Date().addingTimeInterval(-86400).description,
+            time: "08:30",
+            duration: 12,
+            promisesAnalyzed: 3,
+            promisesBroken: 1,
+            promisesKept: 2,
+            worstExcuse: "I was too tired",
+            brutalReview: CallHistoryItem.BrutalReview(
+                paragraph: "You broke another promise today before the sun had even fully risen. The excuses flowed as naturally as your breath.",
+                impactScore: 85,
+                dominantEmotion: "disappointment",
+                patternIdentified: "morning_excuse_patterns"
+            )
+        ),
+        onDismiss: {}
+    )
 }
 
 #Preview {
     EvidenceView()
+        .environmentObject(AuthService.shared)
 }

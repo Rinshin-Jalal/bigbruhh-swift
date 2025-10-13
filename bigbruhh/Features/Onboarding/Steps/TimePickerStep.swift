@@ -10,6 +10,7 @@ import SwiftUI
 
 struct TimePickerStep: View {
     let step: StepDefinition
+    let promptResolver: any PromptResolving
     let backgroundColor: Color
     let textColor: Color
     let accentColor: Color
@@ -45,7 +46,7 @@ struct TimePickerStep: View {
             VStack(spacing: 0) {
                 // Prompt
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(step.prompt)
+                    Text(step.resolvedPrompt(using: promptResolver))
                         .font(.system(size: 28, weight: .bold))
                         .tracking(1.5)
                         .foregroundColor(textColor)
@@ -56,73 +57,33 @@ struct TimePickerStep: View {
                         .tracking(0.5)
                         .foregroundColor(textColor.opacity(0.6))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Text("Timezone: \(getCurrentTimezone())")
+                        .font(.system(size: 10, weight: .medium))
+                        .tracking(0.3)
+                        .foregroundColor(textColor.opacity(0.4))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 64)
                 .padding(.bottom, 20)
 
-                // Wheel Picker
-                ZStack {
-                    // Scrollable time options
-                    ScrollViewReader { proxy in
-                        ScrollView(.vertical, showsIndicators: false) {
-                            LazyVStack(spacing: 0) {
-                                // Top padding
-                                Color.clear.frame(height: (wheelHeight - itemHeight) / 2)
-
-                                ForEach(0..<timeOptions.count, id: \.self) { index in
-                                    Text(formatTimeForDisplay(timeOptions[index]))
-                                        .font(.system(size: index == selectedIndex ? 18 : 14, weight: index == selectedIndex ? .bold : .regular))
-                                        .tracking(index == selectedIndex ? 1.5 : 1)
-                                        .foregroundColor(index == selectedIndex ? accentColor : Color.gray.opacity(0.5))
-                                        .frame(height: itemHeight)
-                                        .id(index)
-                                }
-
-                                // Bottom padding
-                                Color.clear.frame(height: (wheelHeight - itemHeight) / 2)
-                            }
-                        }
-                        .frame(height: wheelHeight)
-                        .simultaneousGesture(
-                            DragGesture()
-                                .onEnded { value in
-                                    // Snap to nearest item
-                                    let offset = value.translation.height
-                                    let indexChange = -Int((offset / itemHeight).rounded())
-                                    let newIndex = max(0, min(timeOptions.count - 1, selectedIndex + indexChange))
-
-                                    withAnimation(.easeOut(duration: 0.2)) {
-                                        selectedIndex = newIndex
-                                        proxy.scrollTo(newIndex, anchor: .center)
-                                    }
-
-                                    triggerHaptic(intensity: 0.3)
-                                }
-                        )
-                        .onAppear {
-                            proxy.scrollTo(selectedIndex, anchor: .center)
-                        }
-                    }
-
-                    // Fixed highlight border for selected item (overlay on top)
-                    if #available(iOS 26.0, *) {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(accentColor, lineWidth: 4)
-                            .clipShape(.rect(corners: .concentric))
-                            .frame(height: itemHeight)
-                            .shadow(color: accentColor.opacity(0.4), radius: 12)
-                            .allowsHitTesting(false)
-                    } else {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(accentColor, lineWidth: 4)
-                            .frame(height: itemHeight)
-                            .shadow(color: accentColor.opacity(0.4), radius: 12)
-                            .allowsHitTesting(false)
+                // Native Picker
+                Picker("Time", selection: $selectedIndex) {
+                    ForEach(0..<timeOptions.count, id: \.self) { index in
+                        Text(formatTimeForDisplay(timeOptions[index]))
+                            .font(.system(size: 18, weight: .bold))
+                            .tracking(1.5)
+                            .foregroundColor(accentColor)
+                            .tag(index)
                     }
                 }
+                .pickerStyle(.wheel)
                 .frame(height: wheelHeight)
                 .padding(.horizontal, 20)
+                .onChange(of: selectedIndex) { _, _ in
+                    triggerHaptic(intensity: 0.3)
+                }
 
                 Spacer()
 
@@ -210,6 +171,12 @@ struct TimePickerStep: View {
 
         return String(format: "%d:%02d–%d:%02d %@", startDisplayHour, startMinutes, endDisplayHour, endMinutes, endPeriod)
     }
+    
+    private func getCurrentTimezone() -> String {
+        let timezone = TimeZone.current.identifier
+        return timezone.replacingOccurrences(of: "_", with: " ")
+                      .replacingOccurrences(of: "/", with: " / ")
+    }
 
     private func handleContinue() {
         triggerHaptic(intensity: 0.5)
@@ -274,6 +241,7 @@ struct TimePickerStep: View {
             requiredPhrase: nil,
             displayType: nil
         ),
+        promptResolver: StaticPromptResolver(),
         backgroundColor: .black,
         textColor: .white,
         accentColor: Color(hex: "#8B00FF"),

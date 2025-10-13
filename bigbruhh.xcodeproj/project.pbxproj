@@ -17,6 +17,7 @@
 		0E39AD472E8D47CA00AF1300 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 0E39AD462E8D47CA00AF1300 /* Storage */; };
 		0E39AD4A2E8D47EA00AF1300 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = 0E39AD492E8D47EA00AF1300 /* ElevenLabs */; };
 		0E39AD4D2E8D480200AF1300 /* LiveKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0E39AD4C2E8D480200AF1300 /* LiveKit */; };
+		0E3F51B62E951935005EDE91 /* StoreKitTestCertificate.cer in Resources */ = {isa = PBXBuildFile; fileRef = 0E3F51B52E951935005EDE91 /* StoreKitTestCertificate.cer */; };
 		0E6DD06C2E8E86EF0043695B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 0E6DD06B2E8E86EF0043695B /* Supabase */; };
 		0E93B7852E92715200C6D7C5 /* glitch.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7842E92715200C6D7C5 /* glitch.mp3 */; };
 		0E93B7892E92716C00C6D7C5 /* sub_bass.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 0E93B7862E92716C00C6D7C5 /* sub_bass.mp3 */; };
@@ -28,6 +29,7 @@
 
 /* Begin PBXFileReference section */
 		0E39AD232E8D44FF00AF1300 /* bigbruhh.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bigbruhh.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0E3F51B52E951935005EDE91 /* StoreKitTestCertificate.cer */ = {isa = PBXFileReference; lastKnownFileType = file; name = StoreKitTestCertificate.cer; path = ../../../../StoreKitTestCertificate.cer; sourceTree = "<group>"; };
 		0E93B7842E92715200C6D7C5 /* glitch.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = glitch.mp3; sourceTree = "<group>"; };
 		0E93B7862E92716C00C6D7C5 /* sub_bass.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = sub_bass.mp3; sourceTree = "<group>"; };
 		0E93B7872E92716C00C6D7C5 /* success.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = success.mp3; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				0EBBA9672E92951B00C741F7 /* Products.storekit */,
+				0E3F51B52E951935005EDE91 /* StoreKitTestCertificate.cer */,
 				0E93B77E2E9241C100C6D7C5 /* Resources */,
 				0E39AD252E8D44FF00AF1300 /* bigbruhh */,
 				0E6DD06A2E8E86EF0043695B /* Frameworks */,
@@ -209,6 +212,7 @@
 				0EBBA9682E92951B00C741F7 /* Products.storekit in Resources */,
 				0E93B7852E92715200C6D7C5 /* glitch.mp3 in Resources */,
 				0E93B7892E92716C00C6D7C5 /* sub_bass.mp3 in Resources */,
+				0E3F51B62E951935005EDE91 /* StoreKitTestCertificate.cer in Resources */,
 				0E93B78A2E92716C00C6D7C5 /* ticking-clock.mp3 in Resources */,
 				0E93B78D2E92717900C6D7C5 /* glitch-long.mp3 in Resources */,
 				0E93B78B2E92716C00C6D7C5 /* success.mp3 in Resources */,
